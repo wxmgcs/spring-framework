@@ -140,17 +140,22 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	@Nullable
 	private volatile Object beanClass;
 
+	// bean的作用范围，对应bean属性的scope
 	@Nullable
 	private String scope = SCOPE_DEFAULT;
 
+	// 是否是抽象，对应bean属性abstract
 	private boolean abstractFlag = false;
 
+	// 是否延迟加载，对应bean属性lazy-init
 	private boolean lazyInit = false;
 
 	private int autowireMode = AUTOWIRE_NO;
 
+	// 依赖检查
 	private int dependencyCheck = DEPENDENCY_CHECK_NONE;
 
+	// 用来表示一个bean的实例化依靠另一个bean先实例化,对应bean属性depend-on
 	@Nullable
 	private String[] dependsOn;
 
