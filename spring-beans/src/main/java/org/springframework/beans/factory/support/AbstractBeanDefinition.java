@@ -160,28 +160,35 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	private String[] dependsOn;
 
 	private boolean autowireCandidate = true;
-
+	// 自动装配时当出现多个bean候选者是，将作为首选者,对应bean属性primary
 	private boolean primary = false;
 
+	// 用于记录Qualifier，对应子元素qualifier
 	private final Map<String, AutowireCandidateQualifier> qualifiers = new LinkedHashMap<>(0);
 
 	@Nullable
 	private Supplier<?> instanceSupplier;
 
+	// 允许访问非公开的构造器和方法，程序设置
 	private boolean nonPublicAccessAllowed = true;
 
 	private boolean lenientConstructorResolution = true;
 
+	// 对应bean属性factory-bean
 	@Nullable
 	private String factoryBeanName;
 
+	// 对应bean属性factory-method
 	@Nullable
 	private String factoryMethodName;
 
+	// 记录构造函数注入属性,对应bean属性constructor-arg
 	private ConstructorArgumentValues constructorArgumentValues;
 
+	// 普通属性集合
 	private MutablePropertyValues propertyValues;
 
+	// 方法重写的持有者,记录lookup-method,replaced-method元素
 	private MethodOverrides methodOverrides = new MethodOverrides();
 
 	@Nullable
