@@ -150,6 +150,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	private final Set<Class<?>> ignoredDependencyInterfaces = new HashSet<>();
 
 	/**
+	 * 当前线程，正在创建的 Bean 对象的名字
+	 *
 	 * The name of the currently created bean, for implicit dependency registration
 	 * on getBean etc invocations triggered from a user-specified Supplier callback.
 	 */
@@ -1199,23 +1201,33 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @return a BeanWrapper for the new instance
 	 * @since 5.0
 	 * @see #getObjectForBeanInstance
+	 *
+	 * * <1> 首先，调用 Supplier 的 get() 方法，获得一个 Bean 实例对象。
+	 * * <2> 然后，根据该实例对象构造一个  BeanWrapper 对象 bw 。
+	 * * <3> 最后，初始化该对象。
 	 */
 	protected BeanWrapper obtainFromSupplier(Supplier<?> instanceSupplier, String beanName) {
+		// 获得原创建的 Bean 的对象名
 		String outerBean = this.currentlyCreatedBean.get();
+		// 设置新的 Bean 的对象名，到 currentlyCreatedBean 中
 		this.currentlyCreatedBean.set(beanName);
 		Object instance;
 		try {
+			// <1> 调用 Supplier 的 get()，返回一个 Bean 对象
 			instance = instanceSupplier.get();
 		}
 		finally {
 			if (outerBean != null) {
+				// 设置原创建的 Bean 的对象名，到 currentlyCreatedBean 中
 				this.currentlyCreatedBean.set(outerBean);
 			}
 			else {
 				this.currentlyCreatedBean.remove();
 			}
 		}
+		// <2> 创建 BeanWrapper 对象
 		BeanWrapper bw = new BeanWrapperImpl(instance);
+		// <3> 初始化 BeanWrapper 对象
 		initBeanWrapper(bw);
 		return bw;
 	}
