@@ -1370,6 +1370,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * (also signals that the returned {@code Class} will never be exposed to application code)
 	 * @return the resolved bean class (or {@code null} if none)
 	 * @throws CannotLoadBeanClassException if we failed to load the class
+	 *
+	 * 解析 bean definition 的 class 类，并将已经解析的 Class 存储在 bean definition 中以供后面使用。
+	 *
+	 * 如果解析的 class 不为空，则会将该 BeanDefinition 进行设置到 mbdToUse 中。
+	 *
+	 * 这样做的主要目的是，以为动态解析的 class 是无法保存到共享的 BeanDefinition 中。
 	 */
 	@Nullable
 	protected Class<?> resolveBeanClass(final RootBeanDefinition mbd, String beanName, final Class<?>... typesToMatch)
@@ -1764,11 +1770,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * The bean definition will already have been merged with the parent definition
 	 * in case of a child definition.
 	 * <p>All bean retrieval methods delegate to this method for actual bean creation.
-	 * @param beanName the name of the bean
+	 * @param beanName the name of the bean (bean 的名字)
 	 * @param mbd the merged bean definition for the bean
+	 *               (已经合并了父类属性的（如果有的话）BeanDefinition 对象)
 	 * @param args explicit arguments to use for constructor or factory method invocation
+	 *                (用于构造函数或者工厂方法创建 Bean 实例对象的参数。)
 	 * @return a new instance of the bean
 	 * @throws BeanCreationException if the bean could not be created
+	 *
+	 * 根据给定的 BeanDefinition 和 args 实例化一个 Bean 对象
+	 *
+	 * 如果该 BeanDefinition 存在父类，则该 BeanDefinition 已经合并了父类的属性。
+	 *
+	 * 所有 Bean 实例的创建，都会委托给该方法实现。
+	 *
+	 *
 	 */
 	protected abstract Object createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
 			throws BeanCreationException;

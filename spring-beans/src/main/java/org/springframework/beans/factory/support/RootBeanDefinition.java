@@ -158,11 +158,14 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * as an alternative to a declaratively specified factory method
 	 * @since 5.0
 	 * @see #setInstanceSupplier
+	 *
+	 * 在构造 BeanDefinition 对象的时候，设置了 instanceSupplier 该值
 	 */
 	public <T> RootBeanDefinition(@Nullable Class<T> beanClass, String scope, @Nullable Supplier<T> instanceSupplier) {
 		super();
 		setBeanClass(beanClass);
 		setScope(scope);
+		// 设置 instanceSupplier 属性
 		setInstanceSupplier(instanceSupplier);
 	}
 
