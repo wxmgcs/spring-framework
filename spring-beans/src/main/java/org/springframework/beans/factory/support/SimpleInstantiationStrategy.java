@@ -57,19 +57,25 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	}
 
 
+	// 1. 默认构造方法
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
+		// 没有覆盖，直接使用反射实例化即可
 		if (bd.getMethodOverrides().isEmpty()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
+				// 获得构造方法 constructorToUse
 				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse == null) {
 					final Class<?> clazz = bd.getBeanClass();
 					if (clazz.isInterface()) {
+						// 如果是接口，抛出 BeanInstantiationException 异常
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
 					try {
+						// 从 clazz 中，获得构造方法
+						// 设置 Method 可访问
 						if (System.getSecurityManager() != null) {
 							constructorToUse = AccessController.doPrivileged(
 									(PrivilegedExceptionAction<Constructor<?>>) () ->
@@ -85,10 +91,12 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
+			// 通过 BeanUtils 直接使用构造器对象实例化 Bean 对象
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
 			// Must generate CGLIB subclass.
+			// 生成 CGLIB 创建的子类对象
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}
@@ -103,11 +111,13 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
+	// 2. 指定构造方法
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			final Constructor<?> ctor, @Nullable Object... args) {
-
+		// 没有覆盖，直接使用反射实例化即可
 		if (bd.getMethodOverrides().isEmpty()) {
+			// 设置构造方法，可访问
 			if (System.getSecurityManager() != null) {
 				// use own privileged to change accessibility (when security is on)
 				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
@@ -115,9 +125,11 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					return null;
 				});
 			}
+			// 通过 BeanUtils 直接使用构造器对象实例化 Bean 对象
 			return (args != null ? BeanUtils.instantiateClass(ctor, args) : BeanUtils.instantiateClass(ctor));
 		}
 		else {
+			// 生成 CGLIB 创建的子类对象
 			return instantiateWithMethodInjection(bd, beanName, owner, ctor, args);
 		}
 	}
@@ -134,11 +146,13 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
+	// 3. 工厂方法
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			@Nullable Object factoryBean, final Method factoryMethod, @Nullable Object... args) {
 
 		try {
+			// 设置 Method 可访问
 			if (System.getSecurityManager() != null) {
 				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
 					ReflectionUtils.makeAccessible(factoryMethod);
@@ -149,16 +163,21 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 				ReflectionUtils.makeAccessible(factoryMethod);
 			}
 
+			// 获得原 Method 对象
 			Method priorInvokedFactoryMethod = currentlyInvokedFactoryMethod.get();
 			try {
+				// 设置新的 Method 对象，到 currentlyInvokedFactoryMethod 中
 				currentlyInvokedFactoryMethod.set(factoryMethod);
+				// 创建 Bean 对象
 				Object result = factoryMethod.invoke(factoryBean, args);
+				// 未创建，则创建 NullBean 对象
 				if (result == null) {
 					result = new NullBean();
 				}
 				return result;
 			}
 			finally {
+				// 设置老的 Method 对象，到 currentlyInvokedFactoryMethod 中
 				if (priorInvokedFactoryMethod != null) {
 					currentlyInvokedFactoryMethod.set(priorInvokedFactoryMethod);
 				}
@@ -167,6 +186,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 				}
 			}
 		}
+
 		catch (IllegalArgumentException ex) {
 			throw new BeanInstantiationException(factoryMethod,
 					"Illegal arguments to factory method '" + factoryMethod.getName() + "'; " +

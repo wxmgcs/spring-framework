@@ -74,6 +74,7 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 
 	@Override
 	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+		// 通过CGLIB生成一个子类对象
 		return instantiateWithMethodInjection(bd, beanName, owner, null);
 	}
 
@@ -82,6 +83,8 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			@Nullable Constructor<?> ctor, @Nullable Object... args) {
 
 		// Must generate CGLIB subclass...
+		// 创建 CglibSubclassCreator 实例，然后调用其 #instantiate(Constructor<?> ctor, Object... args) 方法，
+		// 该方法用于动态创建子类实例，同时实现所需要的 lookups（lookup-method、replace-method）
 		return new CglibSubclassCreator(bd, owner).instantiate(ctor, args);
 	}
 
@@ -114,13 +117,16 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 		 * @return new instance of the dynamically generated subclass
 		 */
 		public Object instantiate(@Nullable Constructor<?> ctor, @Nullable Object... args) {
+			// 通过 Cglib 创建一个代理类
 			Class<?> subclass = createEnhancedSubclass(this.beanDefinition);
 			Object instance;
+			// 没有构造器，通过 BeanUtils 使用默认构造器创建一个bean实例
 			if (ctor == null) {
 				instance = BeanUtils.instantiateClass(subclass);
 			}
 			else {
 				try {
+					// 获取代理类对应的构造器对象，并实例化 bean
 					Constructor<?> enhancedSubclassConstructor = subclass.getConstructor(ctor.getParameterTypes());
 					instance = enhancedSubclassConstructor.newInstance(args);
 				}
@@ -131,6 +137,7 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			}
 			// SPR-10785: set callbacks directly on the instance instead of in the
 			// enhanced class (via the Enhancer) in order to avoid memory leaks.
+			// 为了避免 memory leaks 异常，直接在 bean 实例上设置回调对象
 			Factory factory = (Factory) instance;
 			factory.setCallbacks(new Callback[] {NoOp.INSTANCE,
 					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),
@@ -143,13 +150,18 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 		 * definition, using CGLIB.
 		 */
 		private Class<?> createEnhancedSubclass(RootBeanDefinition beanDefinition) {
+			// 创建 Enhancer 对象
 			Enhancer enhancer = new Enhancer();
+			// 设置 Bean 类
 			enhancer.setSuperclass(beanDefinition.getBeanClass());
+			// 设置 Spring 的命名策略
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
+			// 设置生成策略
 			if (this.owner instanceof ConfigurableBeanFactory) {
 				ClassLoader cl = ((ConfigurableBeanFactory) this.owner).getBeanClassLoader();
 				enhancer.setStrategy(new ClassLoaderAwareGeneratorStrategy(cl));
 			}
+			// 过滤，自定义逻辑来指定调用的callback下标
 			enhancer.setCallbackFilter(new MethodOverrideCallbackFilter(beanDefinition));
 			enhancer.setCallbackTypes(CALLBACK_TYPES);
 			return enhancer.createClass();
@@ -245,12 +257,16 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			super(beanDefinition);
 		}
 
+//		MethodOverrideCallbackFilter 是用来定义 CGLIB 回调过滤方法的拦截器行为，它继承 CglibIdentitySupport 实现 CallbackFilter 接口。
+//				* CallbackFilter 是 CGLIB 的一个回调过滤器。
+//				* CglibIdentitySupport 则为 CGLIB 提供 #hashCode() 和 #equals(Object o) 方法，以确保 CGLIB 不会为每个 Bean 生成不同的类。
 		@Override
 		public int accept(Method method) {
 			MethodOverride methodOverride = getBeanDefinition().getMethodOverrides().getOverride(method);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Override for '" + method.getName() + "' is [" + methodOverride + "]");
 			}
+			// 根据 BeanDefinition 中定义的 MethodOverride 不同，返回不同的值
 			if (methodOverride == null) {
 				return PASSTHROUGH;
 			}
@@ -267,6 +283,7 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 
 
 	/**
+	 *  拦截器
 	 * CGLIB MethodInterceptor to override methods, replacing them with an
 	 * implementation that returns a bean looked up in the container.
 	 */
@@ -282,14 +299,18 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
 			// Cast is safe, as CallbackFilter filters are used selectively.
+			// 获得 method 对应的 LookupOverride 对象
 			LookupOverride lo = (LookupOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
 			Assert.state(lo != null, "LookupOverride not found");
+			// 获得参数
 			Object[] argsToUse = (args.length > 0 ? args : null);  // if no-arg, don't insist on args at all
+			// 获得 Bean
 			if (StringUtils.hasText(lo.getBeanName())) {
 				return (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
 						this.owner.getBean(lo.getBeanName()));
 			}
 			else {
+				// Bean 的类型
 				return (argsToUse != null ? this.owner.getBean(method.getReturnType(), argsToUse) :
 						this.owner.getBean(method.getReturnType()));
 			}
@@ -312,10 +333,13 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 
 		@Override
 		public Object intercept(Object obj, Method method, Object[] args, MethodProxy mp) throws Throwable {
+			// 获得 method 对应的 LookupOverride 对象
 			ReplaceOverride ro = (ReplaceOverride) getBeanDefinition().getMethodOverrides().getOverride(method);
 			Assert.state(ro != null, "ReplaceOverride not found");
 			// TODO could cache if a singleton for minor performance optimization
+			// 获得 MethodReplacer 对象
 			MethodReplacer mr = this.owner.getBean(ro.getMethodReplacerBeanName(), MethodReplacer.class);
+			// 执行替换
 			return mr.reimplement(obj, method, args);
 		}
 	}
